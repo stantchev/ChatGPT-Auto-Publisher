@@ -4,31 +4,31 @@ A professional WordPress plugin that integrates with OpenAI's ChatGPT API to aut
 
 ## Features
 
-### 🤖 AI Content Generation
+### AI Content Generation
 - **OpenAI Integration**: Full integration with ChatGPT (GPT-3.5, GPT-4, GPT-4 Turbo)
 - **Smart Content Creation**: Generates structured posts with proper headings, introductions, and conclusions
 - **SEO Optimization**: Automatic meta descriptions, focus keywords, and SEO-friendly formatting
 - **Multiple Tones**: Professional, casual, technical, and friendly writing styles
 - **Flexible Length**: Short (400 words), medium (800 words), or long (1500+ words) content
 
-### 📅 Automated Scheduling
+### Automated Scheduling
 - **Flexible Scheduling**: Hourly, daily, weekly, or monthly post generation
 - **Topic Variations**: Automatically creates variations of base topics to avoid repetition
 - **Smart Queuing**: Intelligent scheduling system with failure handling and retry logic
 - **Batch Processing**: Efficient handling of multiple scheduled posts
 
-### 🖼️ Image Generation
+### Image Generation
 - **DALL-E Integration**: Automatic featured image generation using OpenAI's DALL-E
 - **Smart Prompts**: Context-aware image prompts based on post content
 - **Media Library**: Seamless integration with WordPress media library
 
-### 📊 Analytics & Monitoring
+### Analytics & Monitoring
 - **Generation Logs**: Detailed logs of all content generation activities
 - **Cost Tracking**: Monitor API usage and associated costs
 - **Performance Metrics**: Track tokens used, generation success rates, and more
 - **Rate Limiting**: Built-in rate limiting to prevent API overuse
 
-### 🔧 Advanced Management
+### Advanced Management
 - **User Permissions**: Role-based access control for content generation
 - **Settings Export/Import**: Easy backup and migration of plugin settings
 - **Error Handling**: Comprehensive error logging and recovery mechanisms
@@ -310,7 +310,7 @@ https://stanchev.bg/
 
 For support, feature requests, or bug reports:
 - Create an issue on GitHub
-- Contact support team
+- Contact support team on https://stanchev.bg/
 - Check documentation wiki
 
 ## Changelog
