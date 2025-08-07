@@ -295,7 +295,16 @@ Check WordPress debug logs and plugin-specific logs:
 
 ## License
 
-This plugin is licensed under
+Copyright © 2025 Milen Stanchev — https://stanchev.bg/
+
+All rights reserved.
+
+This software and associated files are the intellectual property of Milen Stanchev. No part of this codebase may be used, copied, modified, merged, published, distributed, sublicensed, sold, or reused in any way without the prior explicit written permission of the author.
+
+Unauthorized use is strictly prohibited and may result in legal action.
+
+For licensing inquiries, please contact:
+https://stanchev.bg/
 
 ## Support
 
