@@ -323,6 +323,15 @@ For support, feature requests, or bug reports:
 - DALL-E image generation
 - Comprehensive admin interface
 
+## Release Notes – SEO & AI Content Optimization Upgrade
+
+- **Added** integration with major SEO plugins (Yoast, RankMath, AIOSEO, SEOPress, The SEO Framework) with real-time detection and data exchange.  
+- **Introduced** real-time Content Quality Scoring (0–100) with readability, keyword density, and structure analysis.  
+- **Implemented** AI-powered optimization tips, keyword placement recommendations, and competitor insights.  
+- **Added** multi-language support (8 languages) with SEO-preserved translations and one-click post creation.  
+- **Redesigned UI** for single focus keyword optimization, responsive layout, and real-time quality panels.  
+- **Optimized** performance, improved security, and ensured full WordPress 5.0+ compatibility. 
+
 ---
 
 **Made with ❤️ for the WordPress community**
