@@ -20,13 +20,13 @@ class CGAP_Post_Generator {
     /**
      * Generate a complete blog post
      */
-    public function generate_post($topic, $keywords = '', $tone = 'professional', $length = 'medium', $auto_publish = false) {
+    public function generate_post($topic, $focus_keyword = '', $tone = 'professional', $length = 'medium', $auto_publish = false, $language = 'en', $seo_options = array()) {
         try {
             // Create the prompt
-            $prompt = $this->create_prompt($topic, $keywords, $tone, $length);
+            $prompt = $this->create_prompt($topic, $focus_keyword, $tone, $length, $language);
             
             // Generate content
-            $system_message = $this->get_system_message($tone);
+            $system_message = $this->get_system_message($tone, $language);
             $result = $this->openai->generate_content($prompt, $system_message);
             
             // Parse the generated content
@@ -37,6 +37,9 @@ class CGAP_Post_Generator {
             if ($this->settings['include_images']) {
                 $featured_image_id = $this->generate_featured_image($topic);
             }
+            
+            // Initialize SEO integration
+            $seo_integration = new CGAP_SEO_Integration();
             
             // Create WordPress post
             $post_data = array(
@@ -49,22 +52,27 @@ class CGAP_Post_Generator {
                 'meta_input' => array(
                     '_cgap_generated' => true,
                     '_cgap_topic' => $topic,
-                    '_cgap_keywords' => $keywords,
+                    '_cgap_focus_keyword' => $focus_keyword,
+                    '_cgap_language' => $language,
                     '_cgap_tokens_used' => $result['tokens_used'],
                     '_cgap_model' => $result['model']
                 )
             );
             
-            // Add SEO meta if enabled
-            if ($this->settings['seo_optimization'] && !empty($parsed_content['meta_description'])) {
-                $post_data['meta_input']['_yoast_wpseo_metadesc'] = $parsed_content['meta_description'];
-                $post_data['meta_input']['_yoast_wpseo_focuskw'] = $keywords;
-            }
-            
             $post_id = wp_insert_post($post_data);
             
             if (is_wp_error($post_id)) {
                 throw new Exception('Failed to create post: ' . $post_id->get_error_message());
+            }
+            
+            // Set SEO meta data using integration
+            if ($this->settings['seo_optimization']) {
+                $seo_meta = array(
+                    'meta_description' => $parsed_content['meta_description'],
+                    'focus_keyword' => $focus_keyword,
+                    'seo_title' => $parsed_content['title']
+                );
+                $seo_integration->set_seo_meta($post_id, $seo_meta);
             }
             
             // Set featured image
@@ -97,17 +105,19 @@ class CGAP_Post_Generator {
     /**
      * Create prompt for content generation
      */
-    private function create_prompt($topic, $keywords, $tone, $length) {
+    private function create_prompt($topic, $focus_keyword, $tone, $length, $language = 'en') {
         $word_count = $this->get_word_count_for_length($length);
+        $language_name = $this->get_language_name($language);
         
-        $prompt = "Write a comprehensive blog post about '{$topic}'";
+        $prompt = "Write a comprehensive blog post in {$language_name} about '{$topic}'";
         
-        if (!empty($keywords)) {
-            $prompt .= " focusing on these keywords: {$keywords}";
+        if (!empty($focus_keyword)) {
+            $prompt .= " optimized for the focus keyword: '{$focus_keyword}'";
         }
         
         $prompt .= "\n\nRequirements:";
         $prompt .= "\n- Write approximately {$word_count} words";
+        $prompt .= "\n- Write in {$language_name}";
         $prompt .= "\n- Use a {$tone} tone";
         $prompt .= "\n- Include proper headings (H2, H3)";
         $prompt .= "\n- Write an engaging introduction";
@@ -115,8 +125,10 @@ class CGAP_Post_Generator {
         $prompt .= "\n- Include a strong conclusion";
         $prompt .= "\n- Optimize for SEO";
         
-        if (!empty($keywords)) {
-            $prompt .= "\n- Naturally incorporate the keywords: {$keywords}";
+        if (!empty($focus_keyword)) {
+            $prompt .= "\n- Use the focus keyword '{$focus_keyword}' naturally throughout the content";
+            $prompt .= "\n- Include the focus keyword in the title and first paragraph";
+            $prompt .= "\n- Maintain optimal keyword density (0.5-2.5%)";
         }
         
         $prompt .= "\n\nFormat the response as follows:";
@@ -131,15 +143,35 @@ class CGAP_Post_Generator {
     /**
      * Get system message based on tone
      */
-    private function get_system_message($tone) {
+    private function get_system_message($tone, $language = 'en') {
+        $language_name = $this->get_language_name($language);
+        
         $messages = array(
-            'professional' => 'You are a professional content writer who creates authoritative, well-researched blog posts. Write in a clear, professional tone that establishes expertise and trust.',
-            'casual' => 'You are a friendly blogger who writes in a conversational, approachable style. Use a warm, personal tone that connects with readers.',
-            'technical' => 'You are a technical writer who creates detailed, accurate content for knowledgeable audiences. Use precise terminology and provide in-depth explanations.',
-            'friendly' => 'You are an enthusiastic content creator who writes engaging, upbeat content. Use an encouraging, positive tone that motivates readers.'
+            'professional' => "You are a professional content writer who creates authoritative, well-researched blog posts in {$language_name}. Write in a clear, professional tone that establishes expertise and trust. Follow SEO best practices and ensure content is optimized for search engines.",
+            'casual' => "You are a friendly blogger who writes in a conversational, approachable style in {$language_name}. Use a warm, personal tone that connects with readers while maintaining SEO optimization.",
+            'technical' => "You are a technical writer who creates detailed, accurate content in {$language_name} for knowledgeable audiences. Use precise terminology and provide in-depth explanations while ensuring SEO optimization.",
+            'friendly' => "You are an enthusiastic content creator who writes engaging, upbeat content in {$language_name}. Use an encouraging, positive tone that motivates readers while following SEO best practices."
         );
         
         return $messages[$tone] ?? $messages['professional'];
+    }
+    
+    /**
+     * Get language name from code
+     */
+    private function get_language_name($code) {
+        $languages = array(
+            'en' => 'English',
+            'bg' => 'Bulgarian',
+            'es' => 'Spanish',
+            'fr' => 'French',
+            'de' => 'German',
+            'it' => 'Italian',
+            'pt' => 'Portuguese',
+            'ru' => 'Russian'
+        );
+        
+        return $languages[$code] ?? 'English';
     }
     
     /**

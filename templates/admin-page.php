@@ -76,9 +76,44 @@ $stats = cgap_get_generation_stats();
                     </div>
                     
                     <div class="cgap-form-row">
-                        <label for="keywords"><?php _e('Keywords (comma-separated)', 'chatgpt-auto-publisher'); ?></label>
-                        <input type="text" id="keywords" name="keywords" 
-                               placeholder="<?php _e('e.g., SEO, marketing, digital strategy', 'chatgpt-auto-publisher'); ?>">
+                        <label for="focus_keyword"><?php _e('Focus Keyword', 'chatgpt-auto-publisher'); ?> *</label>
+                        <input type="text" id="focus_keyword" name="focus_keyword" 
+                               placeholder="<?php _e('e.g., digital marketing strategy', 'chatgpt-auto-publisher'); ?>"
+                               maxlength="100">
+                        <p class="description"><?php _e('Enter your primary target keyword for SEO optimization', 'chatgpt-auto-publisher'); ?></p>
+                    </div>
+                    
+                    <!-- SEO Integration Section -->
+                    <div class="cgap-form-row">
+                        <h3><?php _e('SEO Integration', 'chatgpt-auto-publisher'); ?></h3>
+                        
+                        <div class="cgap-seo-plugin-selector">
+                            <label for="seo_plugin"><?php _e('SEO Plugin', 'chatgpt-auto-publisher'); ?></label>
+                            <select id="seo_plugin" name="seo_plugin">
+                                <option value=""><?php _e('Auto-detect', 'chatgpt-auto-publisher'); ?></option>
+                                <option value="yoast"><?php _e('Yoast SEO', 'chatgpt-auto-publisher'); ?></option>
+                                <option value="rankmath"><?php _e('RankMath', 'chatgpt-auto-publisher'); ?></option>
+                                <option value="aioseo"><?php _e('All in One SEO Pack', 'chatgpt-auto-publisher'); ?></option>
+                                <option value="seopress"><?php _e('SEOPress', 'chatgpt-auto-publisher'); ?></option>
+                                <option value="seo_framework"><?php _e('The SEO Framework', 'chatgpt-auto-publisher'); ?></option>
+                            </select>
+                            <div id="seo-plugin-status" class="cgap-seo-status"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Language Selection -->
+                    <div class="cgap-form-row">
+                        <label for="content_language"><?php _e('Content Language', 'chatgpt-auto-publisher'); ?></label>
+                        <select id="content_language" name="content_language">
+                            <option value="en"><?php _e('English', 'chatgpt-auto-publisher'); ?></option>
+                            <option value="bg"><?php _e('Bulgarian', 'chatgpt-auto-publisher'); ?></option>
+                            <option value="es"><?php _e('Spanish', 'chatgpt-auto-publisher'); ?></option>
+                            <option value="fr"><?php _e('French', 'chatgpt-auto-publisher'); ?></option>
+                            <option value="de"><?php _e('German', 'chatgpt-auto-publisher'); ?></option>
+                            <option value="it"><?php _e('Italian', 'chatgpt-auto-publisher'); ?></option>
+                            <option value="pt"><?php _e('Portuguese', 'chatgpt-auto-publisher'); ?></option>
+                            <option value="ru"><?php _e('Russian', 'chatgpt-auto-publisher'); ?></option>
+                        </select>
                     </div>
                     
                     <div class="cgap-form-row cgap-form-grid">
@@ -109,6 +144,21 @@ $stats = cgap_get_generation_stats();
                         </label>
                     </div>
                     
+                    <!-- Advanced SEO Options -->
+                    <div class="cgap-form-row">
+                        <label class="cgap-checkbox">
+                            <input type="checkbox" id="enable_seo_analysis" name="enable_seo_analysis" checked>
+                            <?php _e('Enable real-time SEO analysis', 'chatgpt-auto-publisher'); ?>
+                        </label>
+                    </div>
+                    
+                    <div class="cgap-form-row">
+                        <label class="cgap-checkbox">
+                            <input type="checkbox" id="ai_optimization" name="ai_optimization" checked>
+                            <?php _e('Enable AI-powered content optimization suggestions', 'chatgpt-auto-publisher'); ?>
+                        </label>
+                    </div>
+                    
                     <div class="cgap-form-actions">
                         <button type="submit" class="button button-primary cgap-generate-btn" <?php disabled(!$is_configured); ?>>
                             <span class="cgap-btn-text"><?php _e('Generate Content', 'chatgpt-auto-publisher'); ?></span>
@@ -117,10 +167,93 @@ $stats = cgap_get_generation_stats();
                     </div>
                 </form>
                 
+                <!-- Content Quality Analysis Panel -->
+                <div id="cgap-quality-panel" class="cgap-card" style="display: none;">
+                    <h2><?php _e('Content Quality Analysis', 'chatgpt-auto-publisher'); ?></h2>
+                    
+                    <div class="cgap-quality-scores">
+                        <div class="cgap-score-item">
+                            <div class="cgap-score-circle" data-score="0">
+                                <span class="cgap-score-value">0</span>
+                            </div>
+                            <label><?php _e('Overall Score', 'chatgpt-auto-publisher'); ?></label>
+                        </div>
+                        
+                        <div class="cgap-score-item">
+                            <div class="cgap-score-circle" data-score="0">
+                                <span class="cgap-score-value">0</span>
+                            </div>
+                            <label><?php _e('SEO Score', 'chatgpt-auto-publisher'); ?></label>
+                        </div>
+                        
+                        <div class="cgap-score-item">
+                            <div class="cgap-score-circle" data-score="0">
+                                <span class="cgap-score-value">0</span>
+                            </div>
+                            <label><?php _e('Readability', 'chatgpt-auto-publisher'); ?></label>
+                        </div>
+                    </div>
+                    
+                    <div class="cgap-analysis-details">
+                        <div class="cgap-analysis-section">
+                            <h4><?php _e('SEO Analysis', 'chatgpt-auto-publisher'); ?></h4>
+                            <div id="seo-analysis-content"></div>
+                        </div>
+                        
+                        <div class="cgap-analysis-section">
+                            <h4><?php _e('AI Suggestions', 'chatgpt-auto-publisher'); ?></h4>
+                            <div id="ai-suggestions-content"></div>
+                            <button type="button" id="get-ai-suggestions" class="button">
+                                <?php _e('Get AI Suggestions', 'chatgpt-auto-publisher'); ?>
+                            </button>
+                        </div>
+                        
+                        <div class="cgap-analysis-section">
+                            <h4><?php _e('Content Gaps', 'chatgpt-auto-publisher'); ?></h4>
+                            <div id="content-gaps-content"></div>
+                            <button type="button" id="check-content-gaps" class="button">
+                                <?php _e('Check Content Gaps', 'chatgpt-auto-publisher'); ?>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Generation Result -->
                 <div id="cgap-result" class="cgap-result" style="display: none;">
                     <h3><?php _e('Generated Content', 'chatgpt-auto-publisher'); ?></h3>
                     <div class="cgap-result-content"></div>
+                </div>
+                
+                <!-- Translation Panel -->
+                <div id="cgap-translation-panel" class="cgap-card" style="display: none;">
+                    <h2><?php _e('Multi-Language Content', 'chatgpt-auto-publisher'); ?></h2>
+                    
+                    <div class="cgap-translation-controls">
+                        <label for="translate_to"><?php _e('Translate to:', 'chatgpt-auto-publisher'); ?></label>
+                        <select id="translate_to">
+                            <option value="bg"><?php _e('Bulgarian', 'chatgpt-auto-publisher'); ?></option>
+                            <option value="es"><?php _e('Spanish', 'chatgpt-auto-publisher'); ?></option>
+                            <option value="fr"><?php _e('French', 'chatgpt-auto-publisher'); ?></option>
+                            <option value="de"><?php _e('German', 'chatgpt-auto-publisher'); ?></option>
+                            <option value="it"><?php _e('Italian', 'chatgpt-auto-publisher'); ?></option>
+                        </select>
+                        <button type="button" id="translate-content" class="button">
+                            <?php _e('Translate Content', 'chatgpt-auto-publisher'); ?>
+                        </button>
+                    </div>
+                    
+                    <div id="translation-result" style="display: none;">
+                        <h4><?php _e('Translated Content', 'chatgpt-auto-publisher'); ?></h4>
+                        <div class="cgap-translation-content">
+                            <div class="cgap-translated-title"></div>
+                            <div class="cgap-translated-content"></div>
+                        </div>
+                        <div class="cgap-translation-actions">
+                            <button type="button" id="create-translated-post" class="button button-primary">
+                                <?php _e('Create Translated Post', 'chatgpt-auto-publisher'); ?>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

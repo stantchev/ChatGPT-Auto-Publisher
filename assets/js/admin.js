@@ -131,8 +131,341 @@ jQuery(document).ready(function($) {
         
         init: function() {
             $('#cgap-generate-form').on('submit', this.handleSubmit.bind(this));
+            $('#focus_keyword').on('input', this.handleKeywordChange.bind(this));
+            $('#enable_seo_analysis').on('change', this.toggleSEOAnalysis.bind(this));
+            $('#get-ai-suggestions').on('click', this.getAISuggestions.bind(this));
+            $('#check-content-gaps').on('click', this.checkContentGaps.bind(this));
+            $('#translate-content').on('click', this.translateContent.bind(this));
+            $('#create-translated-post').on('click', this.createTranslatedPost.bind(this));
             this.restoreFormData();
             this.bindFormEvents();
+            this.initSEOIntegration();
+        },
+        
+        initSEOIntegration: function() {
+            // Check SEO plugin status
+            this.checkSEOPluginStatus();
+            
+            // Initialize content quality analysis
+            if ($('#enable_seo_analysis').is(':checked')) {
+                this.enableSEOAnalysis();
+            }
+        },
+        
+        checkSEOPluginStatus: function() {
+            CGAPAjax.request('cgap_check_seo_plugins')
+                .then(data => {
+                    this.updateSEOPluginStatus(data);
+                })
+                .catch(error => {
+                    console.log('SEO plugin check failed:', error);
+                });
+        },
+        
+        updateSEOPluginStatus: function(plugins) {
+            const $status = $('#seo-plugin-status');
+            const $select = $('#seo_plugin');
+            
+            // Find active plugin
+            let activePlugin = null;
+            Object.keys(plugins).forEach(key => {
+                if (plugins[key].active) {
+                    activePlugin = key;
+                }
+            });
+            
+            if (activePlugin) {
+                $status.html(`<span class="cgap-seo-status active">✓ ${plugins[activePlugin].name} Active</span>`);
+                $select.val(activePlugin);
+            } else {
+                $status.html('<span class="cgap-seo-status inactive">⚠ No SEO plugin detected</span>');
+            }
+        },
+        
+        handleKeywordChange: function() {
+            const keyword = $('#focus_keyword').val();
+            if (keyword.length > 0 && $('#enable_seo_analysis').is(':checked')) {
+                this.debounce(this.analyzeContent.bind(this), 1000)();
+            }
+        },
+        
+        toggleSEOAnalysis: function() {
+            if ($('#enable_seo_analysis').is(':checked')) {
+                this.enableSEOAnalysis();
+            } else {
+                this.disableSEOAnalysis();
+            }
+        },
+        
+        enableSEOAnalysis: function() {
+            $('#cgap-quality-panel').show();
+            this.analyzeContent();
+        },
+        
+        disableSEOAnalysis: function() {
+            $('#cgap-quality-panel').hide();
+        },
+        
+        analyzeContent: function() {
+            const content = this.getGeneratedContent();
+            const title = $('#topic').val();
+            const keyword = $('#focus_keyword').val();
+            
+            if (!content && !title) return;
+            
+            CGAPAjax.request('cgap_analyze_content', {
+                content: content || title,
+                title: title,
+                keyword: keyword
+            })
+            .then(data => {
+                this.updateQualityScores(data);
+                this.updateSEOAnalysis(data);
+            })
+            .catch(error => {
+                console.log('Content analysis failed:', error);
+            });
+        },
+        
+        updateQualityScores: function(analysis) {
+            // Update overall score
+            this.updateScoreCircle($('.cgap-score-item:nth-child(1) .cgap-score-circle'), analysis.overall_score);
+            
+            // Update SEO score
+            this.updateScoreCircle($('.cgap-score-item:nth-child(2) .cgap-score-circle'), analysis.seo_score.score);
+            
+            // Update readability score
+            this.updateScoreCircle($('.cgap-score-item:nth-child(3) .cgap-score-circle'), analysis.readability.score);
+        },
+        
+        updateScoreCircle: function($circle, score) {
+            $circle.attr('data-score', score);
+            $circle.css('--score', score);
+            $circle.find('.cgap-score-value').text(score);
+            
+            // Update color based on score
+            $circle.removeClass('score-low score-medium score-high');
+            if (score < 50) {
+                $circle.addClass('score-low');
+            } else if (score < 80) {
+                $circle.addClass('score-medium');
+            } else {
+                $circle.addClass('score-high');
+            }
+        },
+        
+        updateSEOAnalysis: function(analysis) {
+            const $content = $('#seo-analysis-content');
+            let html = '';
+            
+            // SEO factors
+            if (analysis.seo_score.factors) {
+                Object.keys(analysis.seo_score.factors).forEach(factor => {
+                    const score = analysis.seo_score.factors[factor];
+                    const status = score >= 15 ? 'good' : score >= 8 ? 'warning' : 'error';
+                    
+                    html += `
+                        <div class="cgap-seo-factor">
+                            <span class="cgap-seo-factor-name">${this.formatFactorName(factor)}</span>
+                            <span class="cgap-seo-factor-score ${status}">${score}/25</span>
+                        </div>
+                    `;
+                });
+            }
+            
+            // Keyword analysis
+            if (analysis.keyword_analysis) {
+                html += '<div class="cgap-keyword-analysis">';
+                html += `
+                    <div class="cgap-keyword-metric">
+                        <span class="cgap-keyword-metric-value">${analysis.keyword_analysis.density}%</span>
+                        <span class="cgap-keyword-metric-label">Density</span>
+                    </div>
+                    <div class="cgap-keyword-metric">
+                        <span class="cgap-keyword-metric-value">${analysis.keyword_analysis.count}</span>
+                        <span class="cgap-keyword-metric-label">Occurrences</span>
+                    </div>
+                `;
+                html += '</div>';
+            }
+            
+            // Readability details
+            if (analysis.readability) {
+                html += '<div class="cgap-readability-details">';
+                html += `
+                    <div class="cgap-readability-metric">
+                        <strong>${analysis.readability.words}</strong>
+                        <div>Words</div>
+                    </div>
+                    <div class="cgap-readability-metric">
+                        <strong>${analysis.readability.sentences}</strong>
+                        <div>Sentences</div>
+                    </div>
+                    <div class="cgap-readability-metric">
+                        <strong>${analysis.readability.avg_sentence_length}</strong>
+                        <div>Avg Sentence Length</div>
+                    </div>
+                `;
+                html += '</div>';
+                html += `<span class="cgap-readability-level ${analysis.readability.level.toLowerCase().replace(' ', '-')}">${analysis.readability.level}</span>`;
+            }
+            
+            $content.html(html);
+        },
+        
+        formatFactorName: function(factor) {
+            return factor.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        },
+        
+        getAISuggestions: function() {
+            const content = this.getGeneratedContent();
+            const title = $('#topic').val();
+            const keyword = $('#focus_keyword').val();
+            
+            if (!content && !title) {
+                CGAPAjax.showNotice('Please generate content first', 'warning');
+                return;
+            }
+            
+            CGAPAjax.request('cgap_get_content_suggestions', {
+                content: content || title,
+                title: title,
+                keyword: keyword
+            })
+            .then(data => {
+                this.displayAISuggestions(data.suggestions);
+            })
+            .catch(error => {
+                CGAPAjax.showNotice(error.message, 'error');
+            });
+        },
+        
+        displayAISuggestions: function(suggestions) {
+            const $content = $('#ai-suggestions-content');
+            let html = '';
+            
+            Object.keys(suggestions).forEach(category => {
+                if (suggestions[category].length > 0) {
+                    html += `<h5>${category}</h5>`;
+                    suggestions[category].forEach(suggestion => {
+                        html += `
+                            <div class="cgap-suggestion info">
+                                <div class="cgap-suggestion-icon">💡</div>
+                                <div class="cgap-suggestion-content">
+                                    <div class="cgap-suggestion-message">${suggestion}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            });
+            
+            $content.html(html);
+        },
+        
+        checkContentGaps: function() {
+            const content = this.getGeneratedContent();
+            const keyword = $('#focus_keyword').val();
+            
+            if (!content || !keyword) {
+                CGAPAjax.showNotice('Please generate content and specify a keyword first', 'warning');
+                return;
+            }
+            
+            CGAPAjax.request('cgap_check_content_gaps', {
+                content: content,
+                keyword: keyword
+            })
+            .then(data => {
+                $('#content-gaps-content').html(`<div class="cgap-content-gaps">${data.gaps.replace(/\n/g, '<br>')}</div>`);
+            })
+            .catch(error => {
+                CGAPAjax.showNotice(error.message, 'error');
+            });
+        },
+        
+        translateContent: function() {
+            const content = this.getGeneratedContent();
+            const title = $('#topic').val();
+            const targetLanguage = $('#translate_to').val();
+            
+            if (!content || !title) {
+                CGAPAjax.showNotice('Please generate content first', 'warning');
+                return;
+            }
+            
+            CGAPAjax.request('cgap_translate_content', {
+                content: content,
+                title: title,
+                target_language: this.getLanguageName(targetLanguage)
+            })
+            .then(data => {
+                this.displayTranslation(data);
+                $('#cgap-translation-panel').show();
+            })
+            .catch(error => {
+                CGAPAjax.showNotice(error.message, 'error');
+            });
+        },
+        
+        displayTranslation: function(data) {
+            $('.cgap-translated-title').text(data.title);
+            $('.cgap-translated-content').html(data.content);
+            $('#translation-result').show();
+        },
+        
+        createTranslatedPost: function() {
+            const translatedTitle = $('.cgap-translated-title').text();
+            const translatedContent = $('.cgap-translated-content').html();
+            const targetLanguage = $('#translate_to').val();
+            
+            CGAPAjax.request('cgap_create_translated_post', {
+                title: translatedTitle,
+                content: translatedContent,
+                language: targetLanguage
+            })
+            .then(data => {
+                CGAPAjax.showNotice('Translated post created successfully!', 'success');
+                window.open(data.edit_url, '_blank');
+            })
+            .catch(error => {
+                CGAPAjax.showNotice(error.message, 'error');
+            });
+        },
+        
+        getLanguageName: function(code) {
+            const languages = {
+                'en': 'English',
+                'bg': 'Bulgarian',
+                'es': 'Spanish',
+                'fr': 'French',
+                'de': 'German',
+                'it': 'Italian',
+                'pt': 'Portuguese',
+                'ru': 'Russian'
+            };
+            return languages[code] || 'English';
+        },
+        
+        getGeneratedContent: function() {
+            // Try to get content from the result panel
+            const $result = $('#cgap-result');
+            if ($result.is(':visible')) {
+                return $result.find('.cgap-content-text').text();
+            }
+            return '';
+        },
+        
+        debounce: function(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
         },
         
         handleSubmit: function(e) {
@@ -149,10 +482,14 @@ jQuery(document).ready(function($) {
             // Prepare form data
             const formData = {
                 topic: $('#topic').val().trim(),
-                keywords: $('#keywords').val().trim(),
+                focus_keyword: $('#focus_keyword').val().trim(),
+                content_language: $('#content_language').val(),
                 tone: $('#tone').val(),
                 length: $('#length').val(),
-                auto_publish: $('#auto_publish').is(':checked')
+                auto_publish: $('#auto_publish').is(':checked'),
+                seo_plugin: $('#seo_plugin').val(),
+                enable_seo_analysis: $('#enable_seo_analysis').is(':checked'),
+                ai_optimization: $('#ai_optimization').is(':checked')
             };
             
             // Show loading state
@@ -166,6 +503,14 @@ jQuery(document).ready(function($) {
                 this.showGenerationResult(data);
                 $form[0].reset();
                 this.clearSavedFormData();
+                
+                // Show quality analysis and translation panels
+                if (data.content) {
+                    $('#cgap-quality-panel').show();
+                    $('#cgap-translation-panel').show();
+                    this.analyzeContent();
+                }
+                
                 CGAPAjax.showNotice(cgap_ajax.strings.success, 'success');
                 
                 // Trigger custom event
@@ -262,10 +607,14 @@ jQuery(document).ready(function($) {
         saveFormData: function() {
             const formData = {
                 topic: $('#topic').val(),
-                keywords: $('#keywords').val(),
+                focus_keyword: $('#focus_keyword').val(),
+                content_language: $('#content_language').val(),
                 tone: $('#tone').val(),
                 length: $('#length').val(),
-                auto_publish: $('#auto_publish').is(':checked')
+                auto_publish: $('#auto_publish').is(':checked'),
+                seo_plugin: $('#seo_plugin').val(),
+                enable_seo_analysis: $('#enable_seo_analysis').is(':checked'),
+                ai_optimization: $('#ai_optimization').is(':checked')
             };
             
             localStorage.setItem('cgap_form_data', JSON.stringify(formData));

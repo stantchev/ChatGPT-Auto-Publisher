@@ -72,6 +72,8 @@ class ChatGPT_Auto_Publisher {
      * Load plugin dependencies
      */
     private function load_dependencies() {
+        require_once CGAP_PLUGIN_DIR . 'includes/class-seo-integration.php';
+        require_once CGAP_PLUGIN_DIR . 'includes/class-content-quality-analyzer.php';
         require_once CGAP_PLUGIN_DIR . 'includes/class-ajax-handler.php';
         require_once CGAP_PLUGIN_DIR . 'includes/class-openai-api.php';
         require_once CGAP_PLUGIN_DIR . 'includes/class-post-generator.php';
@@ -265,7 +267,13 @@ class ChatGPT_Auto_Publisher {
             'cgap_toggle_scheduled_post',
             'cgap_get_log_details',
             'cgap_export_logs',
-            'cgap_clear_logs'
+            'cgap_clear_logs',
+            'cgap_analyze_content',
+            'cgap_get_content_suggestions',
+            'cgap_check_content_gaps',
+            'cgap_translate_content',
+            'cgap_check_seo_plugins',
+            'cgap_create_translated_post'
         );
         
         foreach ($ajax_actions as $action) {

@@ -71,6 +71,36 @@ class CGAP_Ajax_Handler {
             'capability' => 'manage_options',
             'method' => 'handle_clear_logs',
             'nonce_action' => 'cgap_clear_logs'
+        ),
+        'cgap_analyze_content' => array(
+            'capability' => 'edit_posts',
+            'method' => 'handle_analyze_content',
+            'nonce_action' => 'cgap_analyze_content'
+        ),
+        'cgap_get_content_suggestions' => array(
+            'capability' => 'edit_posts',
+            'method' => 'handle_get_content_suggestions',
+            'nonce_action' => 'cgap_get_content_suggestions'
+        ),
+        'cgap_check_content_gaps' => array(
+            'capability' => 'edit_posts',
+            'method' => 'handle_check_content_gaps',
+            'nonce_action' => 'cgap_check_content_gaps'
+        ),
+        'cgap_translate_content' => array(
+            'capability' => 'edit_posts',
+            'method' => 'handle_translate_content',
+            'nonce_action' => 'cgap_translate_content'
+        ),
+        'cgap_check_seo_plugins' => array(
+            'capability' => 'manage_options',
+            'method' => 'handle_check_seo_plugins',
+            'nonce_action' => 'cgap_check_seo_plugins'
+        ),
+        'cgap_create_translated_post' => array(
+            'capability' => 'edit_posts',
+            'method' => 'handle_create_translated_post',
+            'nonce_action' => 'cgap_create_translated_post'
         )
     );
     
@@ -171,10 +201,14 @@ class CGAP_Ajax_Handler {
         
         // Sanitize and validate input
         $topic = sanitize_text_field($_POST['topic']);
-        $keywords = sanitize_text_field($_POST['keywords'] ?? '');
+        $focus_keyword = sanitize_text_field($_POST['focus_keyword'] ?? '');
+        $content_language = sanitize_text_field($_POST['content_language'] ?? 'en');
         $tone = sanitize_text_field($_POST['tone'] ?? 'professional');
         $length = sanitize_text_field($_POST['length'] ?? 'medium');
         $auto_publish = filter_var($_POST['auto_publish'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $seo_plugin = sanitize_text_field($_POST['seo_plugin'] ?? '');
+        $enable_seo_analysis = filter_var($_POST['enable_seo_analysis'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $ai_optimization = filter_var($_POST['ai_optimization'] ?? false, FILTER_VALIDATE_BOOLEAN);
         
         // Validate tone and length values
         $valid_tones = array('professional', 'casual', 'technical', 'friendly');
@@ -188,9 +222,16 @@ class CGAP_Ajax_Handler {
             $length = 'medium';
         }
         
+        // Prepare SEO options
+        $seo_options = array(
+            'plugin' => $seo_plugin,
+            'enable_analysis' => $enable_seo_analysis,
+            'ai_optimization' => $ai_optimization
+        );
+        
         try {
             $generator = new CGAP_Post_Generator();
-            $result = $generator->generate_post($topic, $keywords, $tone, $length, $auto_publish);
+            $result = $generator->generate_post($topic, $focus_keyword, $tone, $length, $auto_publish, $content_language, $seo_options);
             
             if ($result) {
                 $this->send_success_response($result);
@@ -510,6 +551,116 @@ class CGAP_Ajax_Handler {
             
         } catch (Exception $e) {
             cgap_log('Clear Logs Error: ' . $e->getMessage(), 'error');
+            $this->send_error_response($e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Handle content analysis request
+     */
+    private function handle_analyze_content() {
+        try {
+            $seo_integration = new CGAP_SEO_Integration();
+            $seo_integration->analyze_content();
+        } catch (Exception $e) {
+            cgap_log('Content Analysis Error: ' . $e->getMessage(), 'error');
+            $this->send_error_response($e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Handle get content suggestions request
+     */
+    private function handle_get_content_suggestions() {
+        try {
+            $analyzer = new CGAP_Content_Quality_Analyzer();
+            $analyzer->get_content_suggestions();
+        } catch (Exception $e) {
+            cgap_log('Content Suggestions Error: ' . $e->getMessage(), 'error');
+            $this->send_error_response($e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Handle check content gaps request
+     */
+    private function handle_check_content_gaps() {
+        try {
+            $analyzer = new CGAP_Content_Quality_Analyzer();
+            $analyzer->check_content_gaps();
+        } catch (Exception $e) {
+            cgap_log('Content Gaps Error: ' . $e->getMessage(), 'error');
+            $this->send_error_response($e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Handle translate content request
+     */
+    private function handle_translate_content() {
+        try {
+            $seo_integration = new CGAP_SEO_Integration();
+            $seo_integration->translate_content();
+        } catch (Exception $e) {
+            cgap_log('Translation Error: ' . $e->getMessage(), 'error');
+            $this->send_error_response($e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Handle check SEO plugins request
+     */
+    private function handle_check_seo_plugins() {
+        try {
+            $seo_integration = new CGAP_SEO_Integration();
+            $plugins = $seo_integration->get_available_seo_plugins();
+            $this->send_success_response($plugins);
+        } catch (Exception $e) {
+            cgap_log('SEO Plugin Check Error: ' . $e->getMessage(), 'error');
+            $this->send_error_response($e->getMessage(), 500);
+        }
+    }
+    
+    /**
+     * Handle create translated post request
+     */
+    private function handle_create_translated_post() {
+        $title = sanitize_text_field($_POST['title'] ?? '');
+        $content = wp_kses_post($_POST['content'] ?? '');
+        $language = sanitize_text_field($_POST['language'] ?? 'en');
+        
+        if (empty($title) || empty($content)) {
+            $this->send_error_response(__('Title and content are required', 'chatgpt-auto-publisher'), 400);
+            return;
+        }
+        
+        try {
+            $post_data = array(
+                'post_title' => $title,
+                'post_content' => $content,
+                'post_status' => 'draft',
+                'post_type' => 'post',
+                'meta_input' => array(
+                    '_cgap_generated' => true,
+                    '_cgap_translated' => true,
+                    '_cgap_language' => $language
+                )
+            );
+            
+            $post_id = wp_insert_post($post_data);
+            
+            if (is_wp_error($post_id)) {
+                throw new Exception('Failed to create translated post: ' . $post_id->get_error_message());
+            }
+            
+            $this->send_success_response(array(
+                'post_id' => $post_id,
+                'edit_url' => admin_url('post.php?post=' . $post_id . '&action=edit'),
+                'view_url' => get_permalink($post_id)
+            ));
+            
+        } catch (Exception $e) {
+            cgap_log('Create Translated Post Error: ' . $e->getMessage(), 'error');
             $this->send_error_response($e->getMessage(), 500);
         }
     }
