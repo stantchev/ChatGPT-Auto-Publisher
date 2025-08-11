@@ -3,7 +3,7 @@
 ## Plugin Overview
 
 **Plugin Name**: ChatGPT Auto Publisher  
-**Version**: 1.0.1  
+**Version**: 1.0.2  
 **Author**: Stanchev SEO  
 **License**: All rights reserved  
 
