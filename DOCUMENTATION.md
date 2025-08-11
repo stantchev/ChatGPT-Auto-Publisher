@@ -501,7 +501,7 @@ tail -f /path/to/wordpress/wp-content/debug.log | grep CGAP
 
 ## Changelog
 
-### Version 1.0.1 (Current)
+### Version 1.0.1 (Old)
 - **Added**: Initial release with core functionality
 - **Added**: OpenAI ChatGPT integration (GPT-3.5, GPT-4, GPT-4 Turbo)
 - **Added**: Automated scheduling system
@@ -512,13 +512,15 @@ tail -f /path/to/wordpress/wp-content/debug.log | grep CGAP
 - **Added**: Rate limiting and cost tracking
 - **Added**: Export/import settings functionality
 
+### Version 1.0.2 (08.11.2025)
+- **Added**: Integration with popular SEO plugins
+- **Added**: Multi-language content generation
+- **Added**: Content quality scoring
+
 ### Upcoming Features (Roadmap)
 - **Planned**: Bulk content generation
 - **Planned**: Custom post type support
-- **Planned**: Integration with popular SEO plugins
-- **Planned**: Multi-language content generation
 - **Planned**: Advanced prompt templates
-- **Planned**: Content quality scoring
 - **Planned**: Social media auto-posting
 - **Planned**: A/B testing for generated content
 
