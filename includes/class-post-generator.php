@@ -119,11 +119,13 @@ class CGAP_Post_Generator {
         $prompt .= "\n- Write approximately {$word_count} words";
         $prompt .= "\n- Write in {$language_name}";
         $prompt .= "\n- Use a {$tone} tone";
+        $prompt .= "\n- Format the entire post using clean, valid HTML (not Markdown)";
         $prompt .= "\n- Include proper headings (H2, H3)";
         $prompt .= "\n- Write an engaging introduction";
         $prompt .= "\n- Provide valuable, actionable content";
         $prompt .= "\n- Include a strong conclusion";
         $prompt .= "\n- Optimize for SEO";
+        $prompt .= "\n- Optimize for AIO - AI Overviews, ChatGPT";
         
         if (!empty($focus_keyword)) {
             $prompt .= "\n- Use the focus keyword '{$focus_keyword}' naturally throughout the content";
