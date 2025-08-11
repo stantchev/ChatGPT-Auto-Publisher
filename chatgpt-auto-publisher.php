@@ -3,13 +3,13 @@
  * Plugin Name: ChatGPT Auto Publisher
  * Plugin URI: https://github.com/stantchev/ChatGPT-Auto-Publisher
  * Description: Automatically generate and publish WordPress posts using OpenAI's ChatGPT API with scheduling capabilities.
- * Version: 1.0.1
+ * Version: 1.0.2
  * Author: Stanchev SEO
  * Author URI: https://stanchev.bg/
  * License: All rights reserved.
  * License URI: https://github.com/stantchev/ChatGPT-Auto-Publisher/tree/main?tab=License-1-ov-file#readme
  * Text Domain: chatgpt-auto-publisher
- * Domain Path: https://github.com/stantchev/ChatGPT-Auto-Publisher/blob/main/DOCUMENTATION.md
+ * Domain Path: https://stantchev.github.io/ChatGPT-Auto-Publisher/
  * Requires at least: 5.0
  * Tested up to: 6.4
  * Requires PHP: 7.4
