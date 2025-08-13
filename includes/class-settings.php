@@ -102,7 +102,7 @@ class CGAP_Settings {
         }
         
         // Validate tone
-        $valid_tones = array('professional', 'casual', 'technical', 'friendly');
+        $valid_tones = array('professional', 'casual', 'technical', 'friendly', 'ai_optimized');
         if (!in_array($settings['default_tone'], $valid_tones)) {
             $settings['default_tone'] = 'professional';
         }

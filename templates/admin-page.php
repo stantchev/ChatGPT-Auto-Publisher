@@ -124,6 +124,7 @@ $stats = cgap_get_generation_stats();
                                 <option value="casual" <?php selected($settings['default_tone'], 'casual'); ?>><?php _e('Casual', 'chatgpt-auto-publisher'); ?></option>
                                 <option value="technical" <?php selected($settings['default_tone'], 'technical'); ?>><?php _e('Technical', 'chatgpt-auto-publisher'); ?></option>
                                 <option value="friendly" <?php selected($settings['default_tone'], 'friendly'); ?>><?php _e('Friendly', 'chatgpt-auto-publisher'); ?></option>
+                                <option value="ai_optimized" <?php selected($settings['default_tone'], 'ai_optimized'); ?>><?php _e('AI Search Engines (AIO 2025)', 'chatgpt-auto-publisher'); ?></option>
                             </select>
                         </div>
                         

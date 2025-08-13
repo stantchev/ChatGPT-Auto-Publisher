@@ -221,6 +221,7 @@ jQuery(document).ready(function($) {
             .then(data => {
                 this.updateQualityScores(data);
                 this.updateSEOAnalysis(data);
+                this.updateAIOCompliance(data);
             })
             .catch(error => {
                 console.log('Content analysis failed:', error);
@@ -252,6 +253,52 @@ jQuery(document).ready(function($) {
             } else {
                 $circle.addClass('score-high');
             }
+        },
+        
+        updateAIOCompliance: function(analysis) {
+            if (!analysis.aio_compliance) return;
+            
+            const $content = $('#seo-analysis-content');
+            let aioHtml = '';
+            
+            // Add AIO compliance section
+            if (analysis.aio_compliance.overall_aio_score !== undefined) {
+                aioHtml += '<div class="cgap-aio-compliance">';
+                aioHtml += '<h5>🤖 AI Search Engine Optimization (AIO) Compliance</h5>';
+                aioHtml += `<div class="cgap-aio-overall-score">Overall AIO Score: <strong>${analysis.aio_compliance.overall_aio_score}/100</strong></div>`;
+                aioHtml += '<div class="cgap-aio-categories">';
+                
+                const categories = [
+                    { key: 'structure_readability', name: 'Structure & Readability' },
+                    { key: 'semantic_keywords', name: 'Semantic Keywords' },
+                    { key: 'technical_elements', name: 'Technical Elements' },
+                    { key: 'topic_coverage', name: 'Topic Coverage' },
+                    { key: 'ai_agent_optimization', name: 'AI Agent Optimization' },
+                    { key: 'performance_standards', name: 'Performance Standards' },
+                    { key: 'authority_freshness', name: 'Authority & Freshness' },
+                    { key: 'answer_engine_optimization', name: 'Answer Engine Optimization' }
+                ];
+                
+                categories.forEach(category => {
+                    if (analysis.aio_compliance[category.key] && analysis.aio_compliance[category.key].score !== undefined) {
+                        const score = analysis.aio_compliance[category.key].score;
+                        const status = score >= 70 ? 'good' : score >= 40 ? 'warning' : 'error';
+                        
+                        aioHtml += `
+                            <div class="cgap-aio-category">
+                                <span class="cgap-aio-category-name">${category.name}</span>
+                                <span class="cgap-aio-category-score ${status}">${score}/100</span>
+                            </div>
+                        `;
+                    }
+                });
+                
+                aioHtml += '</div></div>';
+            }
+            
+            // Prepend AIO compliance to existing content
+            const existingContent = $content.html();
+            $content.html(aioHtml + existingContent);
         },
         
         updateSEOAnalysis: function(analysis) {
@@ -310,7 +357,8 @@ jQuery(document).ready(function($) {
                 html += `<span class="cgap-readability-level ${analysis.readability.level.toLowerCase().replace(' ', '-')}">${analysis.readability.level}</span>`;
             }
             
-            $content.html(html);
+            // Append to existing content (AIO compliance is prepended)
+            $content.append(html);
         },
         
         formatFactorName: function(factor) {

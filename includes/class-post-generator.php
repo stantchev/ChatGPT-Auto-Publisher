@@ -125,7 +125,26 @@ class CGAP_Post_Generator {
         $prompt .= "\n- Provide valuable, actionable content";
         $prompt .= "\n- Include a strong conclusion";
         $prompt .= "\n- Optimize for SEO";
-        $prompt .= "\n- Optimize for AIO - AI Overviews, ChatGPT";
+        $prompt .= "\n- Optimize for AIO - AI Overviews, ChatGPT Search, Perplexity";
+        
+        // Add AIO-specific requirements for ai_optimized tone
+        if ($tone === 'ai_optimized') {
+            $prompt .= "\n\n2025 AI SEARCH ENGINE OPTIMIZATION (AIO) REQUIREMENTS:";
+            $prompt .= "\n- Use question-based H2/H3 headings (What is...? How to...? Why does...?)";
+            $prompt .= "\n- Place direct answers in the first 2-3 sentences after each question heading";
+            $prompt .= "\n- Keep paragraphs to 2-4 sentences maximum";
+            $prompt .= "\n- Include bullet points and numbered lists for easy scanning";
+            $prompt .= "\n- Add step-by-step instructions where applicable";
+            $prompt .= "\n- Include definitions of key concepts";
+            $prompt .= "\n- Cover benefits, applications, and examples";
+            $prompt .= "\n- Add statistics and data points where relevant";
+            $prompt .= "\n- Create an FAQ section with 3-5 common questions";
+            $prompt .= "\n- Use precise, factual language without marketing fluff";
+            $prompt .= "\n- Make content quotable with short, complete sentences";
+            $prompt .= "\n- Include current year ({$this->get_current_year()}) information for freshness";
+            $prompt .= "\n- Structure for mobile-first reading";
+            $prompt .= "\n- Create context-independent responses that AI can extract";
+        }
         
         if (!empty($focus_keyword)) {
             $prompt .= "\n- Use the focus keyword '{$focus_keyword}' naturally throughout the content";
@@ -152,7 +171,8 @@ class CGAP_Post_Generator {
             'professional' => "You are a professional content writer who creates authoritative, well-researched blog posts in {$language_name}. Write in a clear, professional tone that establishes expertise and trust. Follow SEO best practices and ensure content is optimized for search engines.",
             'casual' => "You are a friendly blogger who writes in a conversational, approachable style in {$language_name}. Use a warm, personal tone that connects with readers while maintaining SEO optimization.",
             'technical' => "You are a technical writer who creates detailed, accurate content in {$language_name} for knowledgeable audiences. Use precise terminology and provide in-depth explanations while ensuring SEO optimization.",
-            'friendly' => "You are an enthusiastic content creator who writes engaging, upbeat content in {$language_name}. Use an encouraging, positive tone that motivates readers while following SEO best practices."
+            'friendly' => "You are an enthusiastic content creator who writes engaging, upbeat content in {$language_name}. Use an encouraging, positive tone that motivates readers while following SEO best practices.",
+            'ai_optimized' => "You are an AI Search Engine Optimization specialist who creates content specifically optimized for AI search engines (ChatGPT Search, Perplexity, Google AI Overviews) in {$language_name}. Follow 2025 AIO standards: use question-based headings, provide direct answers in first 2-3 sentences, structure content for AI extraction, include FAQ sections, maintain 2-4 sentence paragraphs, use bullet points and numbered lists, avoid marketing fluff, include step-by-step instructions where applicable, and create quotable, context-independent responses. Optimize for Answer Engine Optimization (AEO) with concise, factual content that AI can easily parse and quote."
         );
         
         return $messages[$tone] ?? $messages['professional'];
@@ -174,6 +194,13 @@ class CGAP_Post_Generator {
         );
         
         return $languages[$code] ?? 'English';
+    }
+    
+    /**
+     * Get current year
+     */
+    private function get_current_year() {
+        return date('Y');
     }
     
     /**
