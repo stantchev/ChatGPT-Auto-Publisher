@@ -65,7 +65,20 @@ class ChatGPT_Auto_Publisher {
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_scripts'));
+        
+        // Ensure cron hook is properly registered
         add_action('cgap_scheduled_post_generation', array($this, 'generate_scheduled_post'));
+        add_action('init', array($this, 'ensure_cron_hook'));
+    }
+    
+    /**
+     * Ensure cron hook is registered
+     */
+    public function ensure_cron_hook() {
+        if (!wp_next_scheduled('cgap_scheduled_post_generation')) {
+            wp_schedule_event(time(), 'hourly', 'cgap_scheduled_post_generation');
+            cgap_log('Re-registered cron hook for scheduled posts', 'info');
+        }
     }
     
     /**
@@ -74,6 +87,7 @@ class ChatGPT_Auto_Publisher {
     private function load_dependencies() {
         require_once CGAP_PLUGIN_DIR . 'includes/class-seo-integration.php';
         require_once CGAP_PLUGIN_DIR . 'includes/class-content-quality-analyzer.php';
+        require_once CGAP_PLUGIN_DIR . 'includes/class-content-optimizer.php';
         require_once CGAP_PLUGIN_DIR . 'includes/class-ajax-handler.php';
         require_once CGAP_PLUGIN_DIR . 'includes/class-openai-api.php';
         require_once CGAP_PLUGIN_DIR . 'includes/class-post-generator.php';
@@ -108,7 +122,11 @@ class ChatGPT_Auto_Publisher {
         // Schedule cron job for automated posting
         if (!wp_next_scheduled('cgap_scheduled_post_generation')) {
             wp_schedule_event(time(), 'hourly', 'cgap_scheduled_post_generation');
+            cgap_log('Cron job scheduled for automated posting', 'info');
         }
+        
+        // Ensure database schema is up to date
+        $this->update_database_schema();
         
         // Flush rewrite rules
         flush_rewrite_rules();
@@ -180,6 +198,28 @@ class ChatGPT_Auto_Publisher {
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql);
         dbDelta($sql2);
+        
+        cgap_log('Database tables created/updated', 'info');
+    }
+    
+    /**
+     * Update database schema for new features
+     */
+    private function update_database_schema() {
+        global $wpdb;
+        
+        $scheduled_table = $wpdb->prefix . 'cgap_scheduled_posts';
+        
+        // Check if failure_count column exists
+        $column_exists = $wpdb->get_results($wpdb->prepare(
+            "SHOW COLUMNS FROM {$scheduled_table} LIKE %s",
+            'failure_count'
+        ));
+        
+        if (empty($column_exists)) {
+            $wpdb->query("ALTER TABLE {$scheduled_table} ADD COLUMN failure_count INT DEFAULT 0");
+            cgap_log('Added failure_count column to scheduled posts table', 'info');
+        }
     }
     
     /**

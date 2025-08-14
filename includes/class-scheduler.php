@@ -14,6 +14,9 @@ class CGAP_Scheduler {
     public function __construct() {
         global $wpdb;
         $this->table_name = $wpdb->prefix . 'cgap_scheduled_posts';
+        
+        // Ensure cron hook is registered
+        add_action('init', array($this, 'ensure_cron_scheduled'));
     }
     
     /**
@@ -39,6 +42,16 @@ class CGAP_Scheduler {
         );
         
         return $result !== false ? $wpdb->insert_id : false;
+    }
+    
+    /**
+     * Ensure WordPress cron is properly scheduled
+     */
+    public function ensure_cron_scheduled() {
+        if (!wp_next_scheduled('cgap_scheduled_post_generation')) {
+            wp_schedule_event(time(), 'hourly', 'cgap_scheduled_post_generation');
+            cgap_log('Scheduled cron event registered', 'info');
+        }
     }
     
     /**
@@ -89,6 +102,8 @@ class CGAP_Scheduler {
     public function process_scheduled_posts() {
         global $wpdb;
         
+        cgap_log('Processing scheduled posts - started', 'info');
+        
         $current_time = current_time('mysql');
         
         $sql = $wpdb->prepare(
@@ -102,17 +117,28 @@ class CGAP_Scheduler {
         
         $scheduled_posts = $wpdb->get_results($sql);
         
+        if (empty($scheduled_posts)) {
+            cgap_log('No scheduled posts to process', 'info');
+            return;
+        }
+        
+        cgap_log('Found ' . count($scheduled_posts) . ' scheduled posts to process', 'info');
+        
         foreach ($scheduled_posts as $scheduled_post) {
             try {
+                cgap_log('Processing scheduled post ID: ' . $scheduled_post->id, 'info');
                 $this->generate_scheduled_post($scheduled_post);
                 $this->update_next_run($scheduled_post);
+                cgap_log('Successfully processed scheduled post ID: ' . $scheduled_post->id, 'info');
             } catch (Exception $e) {
-                error_log('CGAP Scheduled Post Error: ' . $e->getMessage());
+                cgap_log('Scheduled Post Error (ID: ' . $scheduled_post->id . '): ' . $e->getMessage(), 'error');
                 
                 // Mark as failed after 3 attempts
                 $this->increment_failure_count($scheduled_post->id);
             }
         }
+        
+        cgap_log('Processing scheduled posts - completed', 'info');
     }
     
     /**
@@ -142,6 +168,8 @@ class CGAP_Scheduler {
         // Add scheduled post metadata
         update_post_meta($result['post_id'], '_cgap_scheduled_post_id', $scheduled_post->id);
         update_post_meta($result['post_id'], '_cgap_generated_topic', $selected_topic);
+        
+        cgap_log('Generated scheduled post: ' . $result['post_id'] . ' for schedule ID: ' . $scheduled_post->id, 'info');
         
         return $result;
     }
@@ -222,13 +250,18 @@ class CGAP_Scheduler {
     private function increment_failure_count($id) {
         global $wpdb;
         
-        $current_failures = $wpdb->get_var($wpdb->prepare(
-            "SELECT failure_count FROM {$this->table_name} WHERE id = %d",
+        // First, ensure the failure_count column exists
+        $this->ensure_failure_count_column();
+        
+        $current_failures = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COALESCE(failure_count, 0) FROM {$this->table_name} WHERE id = %d",
             $id
-        )) ?: 0;
+        ));
         
         $new_count = $current_failures + 1;
         $status = $new_count >= 3 ? 'failed' : 'active';
+        
+        cgap_log("Incrementing failure count for schedule ID {$id}: {$current_failures} -> {$new_count}", 'warning');
         
         $wpdb->update(
             $this->table_name,
@@ -239,6 +272,63 @@ class CGAP_Scheduler {
             array('id' => $id),
             array('%d', '%s'),
             array('%d')
+        );
+    }
+    
+    /**
+     * Ensure failure_count column exists in database
+     */
+    private function ensure_failure_count_column() {
+        global $wpdb;
+        
+        $column_exists = $wpdb->get_results($wpdb->prepare(
+            "SHOW COLUMNS FROM {$this->table_name} LIKE %s",
+            'failure_count'
+        ));
+        
+        if (empty($column_exists)) {
+            $wpdb->query("ALTER TABLE {$this->table_name} ADD COLUMN failure_count INT DEFAULT 0");
+            cgap_log('Added failure_count column to scheduled posts table', 'info');
+        }
+    }
+    
+    /**
+     * Toggle scheduled post status (pause/resume)
+     */
+    public function toggle_scheduled_post($id) {
+        global $wpdb;
+        
+        $current_status = $wpdb->get_var($wpdb->prepare(
+            "SELECT status FROM {$this->table_name} WHERE id = %d",
+            $id
+        ));
+        
+        if (!$current_status) {
+            throw new Exception(__('Scheduled post not found', 'chatgpt-auto-publisher'));
+        }
+        
+        $new_status = ($current_status === 'active') ? 'paused' : 'active';
+        
+        $result = $wpdb->update(
+            $this->table_name,
+            array('status' => $new_status),
+            array('id' => $id),
+            array('%s'),
+            array('%d')
+        );
+        
+        if ($result === false) {
+            throw new Exception(__('Failed to update scheduled post status', 'chatgpt-auto-publisher'));
+        }
+        
+        cgap_log("Toggled scheduled post {$id} status: {$current_status} -> {$new_status}", 'info');
+        
+        return array(
+            'new_status' => $new_status,
+            'message' => sprintf(
+                __('Schedule %s successfully', 'chatgpt-auto-publisher'),
+                $new_status === 'active' ? 'resumed' : 'paused'
+            )
         );
     }
     
@@ -263,5 +353,34 @@ class CGAP_Scheduler {
         );
         
         return $stats;
+    }
+    
+    /**
+     * Get detailed schedule information
+     */
+    public function get_schedule_details($id) {
+        global $wpdb;
+        
+        $schedule = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$this->table_name} WHERE id = %d",
+            $id
+        ));
+        
+        if (!$schedule) {
+            return null;
+        }
+        
+        // Get generated posts count
+        $generated_posts = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->posts} p 
+             INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id 
+             WHERE pm.meta_key = '_cgap_scheduled_post_id' 
+             AND pm.meta_value = %d",
+            $id
+        ));
+        
+        $schedule->generated_posts_count = (int) $generated_posts;
+        
+        return $schedule;
     }
 }

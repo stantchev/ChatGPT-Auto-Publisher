@@ -390,34 +390,10 @@ class CGAP_Ajax_Handler {
         }
         
         try {
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'cgap_scheduled_posts';
-            
-            // Get current status
-            $current_status = $wpdb->get_var($wpdb->prepare(
-                "SELECT status FROM {$table_name} WHERE id = %d",
-                $id
-            ));
-            
-            if (!$current_status) {
-                $this->send_error_response(__('Scheduled post not found', 'chatgpt-auto-publisher'), 404);
-                return;
-            }
-            
-            // Toggle status
-            $new_status = ($current_status === 'active') ? 'paused' : 'active';
-            
             $scheduler = new CGAP_Scheduler();
-            $result = $scheduler->update_scheduled_post($id, array('status' => $new_status));
+            $result = $scheduler->toggle_scheduled_post($id);
             
-            if ($result) {
-                $this->send_success_response(array(
-                    'message' => __('Status updated successfully!', 'chatgpt-auto-publisher'),
-                    'new_status' => $new_status
-                ));
-            } else {
-                $this->send_error_response(__('Failed to update status', 'chatgpt-auto-publisher'), 500);
-            }
+            $this->send_success_response($result);
             
         } catch (Exception $e) {
             cgap_log('Toggle Scheduled Post Error: ' . $e->getMessage(), 'error');
